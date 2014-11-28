@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using LeagueSharp;
 using LeagueSharp.Common;
+using SharpDX;
 using Color = System.Drawing.Color;
 
 namespace Rengar
@@ -38,7 +40,7 @@ namespace Rengar
             get { return _config.Item("packetCasting").GetValue<bool>(); }
         }
 
-        private static void Main()
+        private static void Main(string[] args)
         {
             CustomEvents.Game.OnGameLoad += OnGameLoad;
         }
@@ -54,7 +56,7 @@ namespace Rengar
             // Load Target Selector
             var targetSelector = new Menu("Target Selector", "ts");
             SimpleTs.AddToMenu(targetSelector);
-
+            _config.AddSubMenu(targetSelector);
 
             // Load Orbwalker
             var orbwalker = new Menu("Orbwalker", "Orbwalker");
@@ -108,7 +110,8 @@ namespace Rengar
             // Misc
             var miscItems = new List<MenuItem>
             {
-                new MenuItem("packetCasting", "Use Packets").SetValue(true)
+                new MenuItem("packetCasting", "Use Packets").SetValue(true),
+                new MenuItem("ChangeESC", "Change Empowered Spell").SetValue(new KeyBind("N".ToCharArray()[0], KeyBindType.Press))
             };
 
 
@@ -129,12 +132,24 @@ namespace Rengar
                 sm.Value.ForEach(i => sm.Key.AddItem(i));
                 _config.AddSubMenu(sm.Key);
             }
-
+            
             
             // Add menu to the Main Menu
             _config.AddToMainMenu();
 
+
+            // Empowered Spell Changer
+            _config.Item("ChangeESC").ValueChanged += (sender, eventArgs) =>
+            {
+                if (eventArgs.GetOldValue<KeyBind>().Active) return;
+
+                var eSpell = _config.Item("EmpoweredSpellC");
+                var oldValue = eSpell.GetValue<StringList>();
+                var newValue = oldValue.SelectedIndex + 1 >= oldValue.SList.Count() ? 0 : oldValue.SelectedIndex + 1;
+                eSpell.SetValue(new StringList(oldValue.SList, newValue));
+            };
             
+
             // Spells
             _q = new Spell(SpellSlot.Q);
             _w = new Spell(SpellSlot.W, 500f);
@@ -160,7 +175,8 @@ namespace Rengar
 
 
             Game.PrintChat("<font color=\"#0066FF\">[<font color=\"#FFFFFF\">madk's Rengar</font>]</font> <font color=\"#FFFFFF\">Assembly loaded sucessfully!</font>");
-            Game.PrintChat("<font color=\"#0066FF\">[<font color=\"#FFFFFF\">madk's Rengar</font>]</font> <font color=\"#FFFFFF\">Hi, i rewrote this assembly, it's still not finished yet, there should be some bugs that i still need to fix. I do not recommend you using this is rankeds. Have fun :^)");
+            Game.PrintChat("<font color=\"#0066FF\">[<font color=\"#FFFFFF\">madk's Rengar</font>]</font> <font color=\"#FFFFFF\">Hi, i rewrote this assembly, it's still not finished yet,");
+            Game.PrintChat("<font color=\"#FFFFFF\">there should be some bugs that i still need to fix. I do not recommend you using this is rankeds. Have fun :^)");
         }
 
         private static void OnGameUpdate(EventArgs args)
@@ -190,24 +206,34 @@ namespace Rengar
             var w = _config.Item("Wd").GetValue<Circle>();
             var e = _config.Item("Ed").GetValue<Circle>();
             var r = _config.Item("Rd").GetValue<Circle>();
+            var es = _config.Item("EmpSpell").GetValue<Circle>();
             var rMode = _config.Item("Rdm").GetValue<StringList>().SelectedIndex;
             var dsDynamic = _config.Item("DSdynamic").GetValue<bool>();
             var dsThick = _config.Item("DSthick").GetValue<Slider>().Value;
 
 
-            if (w.Active)
+            if (w.Active && _w.Level > 0)
             {
                 Utility.DrawCircle(Player.Position, _w.Range, dsDynamic ? _w.IsReady() ? Color.Green : Color.Red : w.Color, dsThick);
             }
 
-            if (e.Active)
+            if (e.Active && _e.Level > 0)
             {
                 Utility.DrawCircle(Player.Position, _e.Range, dsDynamic ? _e.IsReady() ? Color.Green : Color.Red : w.Color, dsThick);
             }
 
-            if (r.Active && rMode != 1)
+            if (r.Active && rMode != 1 && _r.Level > 0)
             {
                 Utility.DrawCircle(Player.Position, 1000f + 1000f * _r.Level, dsDynamic ? _r.IsReady() ? Color.Green : Color.Red : r.Color, dsThick);
+            }
+
+            if (es.Active)
+            {
+                var eSpell = _config.Item("EmpoweredSpellC").GetValue<StringList>();
+
+                var posX = Drawing.WorldToMinimap(new Vector3()).X > Drawing.Width/2f ? Drawing.Width - 160 : 10;
+
+                Drawing.DrawText(posX, (Drawing.Height*0.68f), es.Color, "Empowered Spell: {0}", eSpell.SList[eSpell.SelectedIndex]);
             }
         }
 
@@ -218,10 +244,10 @@ namespace Rengar
 
             var dsDynamic = _config.Item("DSdynamic").GetValue<bool>();
 
-            if (rMode == 1 || !r.Active)
+            if (rMode == 0 || !r.Active || _r.Level == 0)
                 return;
 
-            Utility.DrawCircle(Player.Position, 1000f + 1000f * _r.Level, dsDynamic ? _r.IsReady() ? Color.Green : Color.Red : r.Color, 1, 30, true);
+            Utility.DrawCircle(Player.Position, 1000f + 1000f * _r.Level, dsDynamic ? _r.IsReady() ? Color.Green : Color.Red : r.Color, 1, 30, true); 
         }
 
 
