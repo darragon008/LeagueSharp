@@ -1,10 +1,10 @@
-﻿#region
+#region
 
 using System;
 using System.Linq;
 using LeagueSharp;
 using LeagueSharp.Common;
-using LX_Orbwalker;
+using xSLx_Orbwalker;
 using SharpDX;
 using Color = System.Drawing.Color;
 
@@ -99,7 +99,9 @@ namespace Nidalee
 
             // Orbwalker
             var Menu_Orbwalker = new Menu("Orbwalker", "Orbwalker");
-            LXOrbwalker.AddToMenu(Menu_Orbwalker);
+            xSLxOrbwalker.AddToMenu(Menu_Orbwalker);
+            Menu_Orbwalker.AddSubMenu(Menu_Orbwalker);
+            Menu_Orbwalker.AddToMainMenu();
 
             // Key Bindings
             var Menu_KeyBindings = new Menu("Key Bindings", "KB");
